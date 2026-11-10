@@ -1,0 +1,8 @@
+S1 Jolly Spaghetti with Chickenjoy|129
+S2 Jolly Spaghetti with Burger Steak|99
+S3 Jolly Spaghetti with Yumburger and Drink|109
+S4 Jolly Spaghetti with Cheesy Yumburger and Drink|119
+Double Jolly Spaghetti Family Pan|299
+Peach Mango Pie|39
+Iced Tea|45
+Sundae|39
