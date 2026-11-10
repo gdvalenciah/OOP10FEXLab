@@ -1,1 +1,2 @@
 2026-11-10 10:52:12|Order 001|1x Spaghetti + Chicken Meal, 1x Spaghetti + Burger Steak, 1x Burger + Drink Meal, 1x Cheesy Burger + Drink Meal, 3x Family Pan Spaghetti|P1353.00
+2026-11-10 11:37:32|Order 001|1x Yumburger, 1x Value Meal 1, 1x 1pc Chicken, 1x Burger Steak, 1x Peach Mango Pie, 2x Iced Tea|P411.00
