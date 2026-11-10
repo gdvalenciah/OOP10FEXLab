@@ -1,8 +1,15 @@
-S1 Jolly Spaghetti with Chickenjoy|129
-S2 Jolly Spaghetti with Burger Steak|99
-S3 Jolly Spaghetti with Yumburger and Drink|109
-S4 Jolly Spaghetti with Cheesy Yumburger and Drink|119
-Double Jolly Spaghetti Family Pan|299
-Peach Mango Pie|39
-Iced Tea|45
-Sundae|39
+Packages|Spaghetti + Chicken Meal|129
+Packages|Spaghetti + Burger Steak|99
+Packages|Burger + Drink Meal|109
+Packages|Cheesy Burger + Drink Meal|119
+Packages|Family Pan Spaghetti|299
+Burgers|Yumburger|45
+Burgers|Cheesy Yumburger|59
+Chicken|1pc Chicken|89
+Chicken|2pc Chicken|169
+Sides|Fries|45
+Sides|Burger Steak|49
+Desserts|Peach Mango Pie|39
+Desserts|Sundae|39
+Drinks|Iced Tea|45
+Drinks|Coke|40

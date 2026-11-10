@@ -1,1 +1,1 @@
-2026-11-10 10:03:43|Order 001|S2 Jolly Spaghetti with Burger Steak, Peach Mango Pie, Iced Tea, Sundae|P222.00
+2026-11-10 10:52:12|Order 001|1x Spaghetti + Chicken Meal, 1x Spaghetti + Burger Steak, 1x Burger + Drink Meal, 1x Cheesy Burger + Drink Meal, 3x Family Pan Spaghetti|P1353.00
