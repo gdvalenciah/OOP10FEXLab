@@ -136,7 +136,7 @@ namespace OOP10FEXLab
         }
     }
 
-    // ---------- MYSQL DATABASE ----------
+    // --------- MYSQL DATABASE ---------
     public static class Db
     {
         // Lab server from your professor. Testing on your own XAMPP? Use server=localhost
