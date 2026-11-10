@@ -139,7 +139,6 @@ namespace OOP10FEXLab
     // --------- MYSQL DATABASE ---------
     public static class Db
     {
-        // Lab server from your professor. Testing on your own XAMPP? Use server=localhost
         public const string ConnStr =
             "server=localhost;port=3306;database=fastfooddb;uid=root;pwd=;Connection Timeout=5;";
 
