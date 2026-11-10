@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using MySql.Data.MySqlClient;   // NuGet: MySql.Data
 
 namespace OOP10FEXLab
 {
@@ -15,9 +16,13 @@ namespace OOP10FEXLab
         public string Category { get; }
         public string Name { get; }
         public decimal Price { get; }
-        public MenuItem(string category, string name, decimal price)
+        public string Details { get; }   // what is inside a package
+        public string DbName { get; }    // the text saved to transactions_tbl
+        public MenuItem(string category, string name, decimal price, string details = "", string dbName = null)
         {
             Category = category; Name = name; Price = price;
+            Details = details ?? "";
+            DbName = dbName ?? name;
         }
     }
 
@@ -131,6 +136,72 @@ namespace OOP10FEXLab
         }
     }
 
+    // ---------- MYSQL DATABASE ----------
+    public static class Db
+    {
+        // Lab server from your professor. Testing on your own XAMPP? Use server=localhost
+        public const string ConnStr =
+            "server=localhost;port=3306;database=fastfooddb;uid=root;pwd=;Connection Timeout=5;";
+
+        // Reads package_tbl. Each package_name holds the name, the contents and the price, e.g.
+        // "Value Meal 1 / Fries / Cheese Burger / Drinks / Price 130" (one item per line)
+        public static List<MenuItem> LoadPackages()
+        {
+            var list = new List<MenuItem>();
+            using (var conn = new MySqlConnection(ConnStr))
+            {
+                conn.Open();
+                using (var cmd = new MySqlCommand("SELECT package_name FROM package_tbl", conn))
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                        list.Add(ParsePackage(reader.GetString("package_name")));
+                }
+            }
+            return list;
+        }
+
+        private static MenuItem ParsePackage(string raw)
+        {
+            var lines = raw.Replace("\r", "").Split('\n')
+                           .Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
+            string name = lines.Count > 0 ? lines[0] : raw;
+
+            decimal price = 0;
+            var m = Regex.Match(raw, @"price\W*(\d+(?:\.\d+)?)", RegexOptions.IgnoreCase);
+            if (m.Success) decimal.TryParse(m.Groups[1].Value, out price);
+
+            var contents = lines.Skip(1).Where(l => !Regex.IsMatch(l, @"^price", RegexOptions.IgnoreCase));
+            return new MenuItem("Packages", name, price, string.Join(", ", contents), raw);
+        }
+
+        // Saves the order to transactions_tbl: one row per item (all rows saved, or none)
+        public static void SaveOrder(Order order)
+        {
+            using (var conn = new MySqlConnection(ConnStr))
+            {
+                conn.Open();
+                using (var tran = conn.BeginTransaction())
+                {
+                    const string sql = "INSERT INTO transactions_tbl (package_name, transaction_date) VALUES (@pkg, @date)";
+                    foreach (var line in order.Lines)
+                    {
+                        for (int i = 0; i < line.Qty; i++)
+                        {
+                            using (var cmd = new MySqlCommand(sql, conn, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@pkg", line.Item.DbName);
+                                cmd.Parameters.AddWithValue("@date", DateTime.Now);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    tran.Commit();
+                }
+            }
+        }
+    }
+
     // ---------- FOOD PICTURES ----------
     // Looks for an "images" folder and a file named after the item, e.g. "Iced Tea" -> iced-tea.png
     // If no picture is found, a colored placeholder with initials is drawn instead.
@@ -234,14 +305,18 @@ namespace OOP10FEXLab
         private readonly ListView _cartView = new ListView();
         private readonly Label _totalLabel = new Label();
         private readonly ImageList _cartImages = new ImageList { ImageSize = new Size(48, 36), ColorDepth = ColorDepth.Depth32Bit };
+        private readonly ToolTip _tip = new ToolTip();
+        private bool _online;
         private string _selectedCategory;
 
         public KioskForm(OrderQueue queue)
         {
             _queue = queue;
-            _menu = MealRepository.Load();   // meals come from meals.txt
+            bool online;
+            _menu = LoadMenu(out online);    // packages from MySQL (falls back to meals.txt)
+            _online = online;
 
-            Text = "KIOSK - Place your order";
+            Text = online ? "KIOSK - Connected to database" : "KIOSK - OFFLINE (using meals.txt)";
             Size = new Size(1000, 620);
             StartPosition = FormStartPosition.Manual;
             Location = new Point(20, 40);
@@ -335,6 +410,25 @@ namespace OOP10FEXLab
             BuildMenu();
         }
 
+        private static List<MenuItem> LoadMenu(out bool online)
+        {
+            var local = MealRepository.Load();
+            try
+            {
+                var packages = Db.LoadPackages();
+                online = true;
+                // packages from the database replace the "Packages" category of meals.txt
+                return packages.Concat(local.Where(m => m.Category != "Packages")).ToList();
+            }
+            catch (Exception ex)
+            {
+                online = false;
+                MessageBox.Show("Could not load packages from the database:\n" + ex.Message +
+                                "\n\nUsing meals.txt instead.", "Database");
+                return local;
+            }
+        }
+
         private static Button MakeButton(string text, Color back, Color fore, int w, int h, float size)
         {
             var b = new Button
@@ -378,7 +472,11 @@ namespace OOP10FEXLab
             _menuPanel.Controls.Clear();
             foreach (var item in _menu.Where(m => m.Category == _selectedCategory))
             {
-                var btn = MakeButton($"{item.Name}\nP{item.Price:0.00}", Yellow, DarkRed, 180, 170, 10);
+                string label = item.Details.Length > 0
+                    ? $"{item.Name}\n{item.Details}\nP{item.Price:0.00}"
+                    : $"{item.Name}\nP{item.Price:0.00}";
+                var btn = MakeButton(label, Yellow, DarkRed, 180, 170, item.Details.Length > 0 ? 9 : 10);
+                if (item.Details.Length > 0) _tip.SetToolTip(btn, item.Details);
                 btn.Image = ImageLoader.Get(item, 130, 90);
                 btn.ImageAlign = ContentAlignment.TopCenter;
                 btn.TextAlign = ContentAlignment.BottomCenter;
@@ -440,8 +538,16 @@ namespace OOP10FEXLab
                 return;
             }
             var order = _queue.Place(_cart);
-            TransactionLog.Save(order);   // record the transaction
-            MessageBox.Show($"Order placed!\nYour number: {order.Display}\nTotal: P{order.Total:0.00}", "Thank you");
+            TransactionLog.Save(order);   // backup copy in transactions.txt
+
+            string dbMsg;
+            if (!_online) dbMsg = "Offline: saved to transactions.txt only.";
+            else
+            {
+                try { Db.SaveOrder(order); dbMsg = "Saved to the transactions record (database)."; }
+                catch (Exception ex) { dbMsg = "Database save FAILED: " + ex.Message + "\n(Saved to transactions.txt only.)"; }
+            }
+            MessageBox.Show($"Order placed!\nYour number: {order.Display}\nTotal: P{order.Total:0.00}\n\n{dbMsg}", "Thank you");
             ClearCart();
         }
     }
